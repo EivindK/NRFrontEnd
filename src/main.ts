@@ -19,7 +19,7 @@ const cam1Save: SavedCamera = {pos: [0,0,0], rot: [0,0,0,0], set: false};
 const cam2Save: SavedCamera = {pos: [0,0,0], rot: [0,0,0,0], set: false};
 const cam3Save: SavedCamera = {pos: [0,0,0], rot: [0,0,0,0], set: false};
 
-export async function LoadScene(view: View): Promise<void> {
+export async function LoadScene(view: View, controller: AbortController): Promise<void> {
     // Initialize the data API with the Novorender data server service
     const dataApi = createAPI({
         serviceUrl: "https://data.novorender.com/api",
@@ -34,9 +34,11 @@ export async function LoadScene(view: View): Promise<void> {
     const config = await view.loadSceneFromURL(new URL(url));
     const { center, radius } = config.boundingSphere;
     view.activeController.autoFit(center, radius);
-    
+
     submitButton?.addEventListener('click', () => {
-        LookupEntities(searchForm.value, view, sceneData as SceneData);
+        controller.abort("Starting new search");
+        controller = new AbortController();
+        LookupEntities(searchForm.value, view, sceneData as SceneData, controller);
     });
 }
 
@@ -81,11 +83,11 @@ function LoadCamera(buttonID: number, view: View) {
     }
 }
 
-async function LookupEntities (entityName: string, view: View, sceneData: SceneData) {
+async function LookupEntities (entityName: string, view: View, sceneData: SceneData, controller: AbortController) {
     try {
         const { db } = sceneData;
         if (db) {
-            const controller = new AbortController();
+            
             const signal = controller.signal;
 
             // Run the searches
@@ -132,13 +134,15 @@ async function main(canvas: HTMLCanvasElement) {
     const imports = await View.downloadImports({ baseUrl: "/novorender/api/"});
 
     const view = new View(canvas, devicProfile, imports);
-    let sceneData: Awaited<ReturnType<SceneData | SceneLoadFail | any>>;
+    // let sceneData: Awaited<ReturnType<SceneData | SceneLoadFail | any>>;
 
     view.modifyRenderState({ grid: { enabled: true } });
 
     await view.switchCameraController("flight");
 
-    sceneData = LoadScene(view);
+    const controller = new AbortController();
+
+    LoadScene(view, controller);
 
     for (var btn of btns) {
         btn.addEventListener('click', function ButtonClick(event) {
@@ -151,9 +155,10 @@ async function main(canvas: HTMLCanvasElement) {
         });
     }
 
-    submitButton?.addEventListener('click', () => {
-        LookupEntities(searchForm.value, view, sceneData as Awaited<Promise<PromiseLike<SceneData>>>)
-    });
+    // submitButton?.addEventListener('click', () => {
+    //     console.log("Access through main");
+    //     LookupEntities(searchForm.value, view, sceneData as Awaited<Promise<PromiseLike<SceneData>>>, controller)
+    // });
 
     searchForm?.addEventListener('keypress', (event) => { // Prevents some annoying form behaviour that refreshed the page
         if (event.keyCode === 13) {
