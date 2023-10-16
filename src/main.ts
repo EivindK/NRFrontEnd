@@ -1,5 +1,5 @@
 import { View, getDeviceProfile, FlightController, type RenderStateHighlightGroups, createNeutralHighlight } from "@novorender/api";
-import { createAPI, SceneLoadFail, type SceneData } from '@novorender/data-js-api'
+import { createAPI, type SceneData } from '@novorender/data-js-api'
 import { quat, vec3 } from "gl-matrix";
 
 
