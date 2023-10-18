@@ -102,25 +102,23 @@ async function LookupEntities (entityName: string, view: View, sceneData: SceneD
                 result.push(object.id);
             }
 
-            // No results found, push all 
-            // (I know this is ugly, but it was the best I could come up with at the time, I'm sorry)
-            if (result.length == 0) {
-                const allIterator = db.search({ searchPattern: [{property: "123456789", exact: true, exclude: true}] }, signal);
+            if (result.length > 0) {
+                // Then we isolate the objects found
+                const renderStateHighlightGroups: RenderStateHighlightGroups = {
+                    defaultAction: "hide",
+                    groups: [{ action: createNeutralHighlight(), objectIds: result }],
+                };
 
-                for await (const object of allIterator) {
-                    result.push(object.id);
-                }
+                // Finally, modify the renderState
+                view.modifyRenderState({ highlights: renderStateHighlightGroups });
+            } else { // No results found, apply neutral to all
+                view.modifyRenderState({ highlights: {
+                    defaultAction: createNeutralHighlight(),
+                    groups: [{ action: createNeutralHighlight(), objectIds: result}]
+                }});
             }
 
-
-            // Then we isolate the objects found
-            const renderStateHighlightGroups: RenderStateHighlightGroups = {
-                defaultAction: "hide",
-                groups: [{ action: createNeutralHighlight(), objectIds: result }],
-            };
-
-            // Finally, modify the renderState
-            view.modifyRenderState({ highlights: renderStateHighlightGroups });
+            
         }
     }   catch (e) {
         console.warn(e);
@@ -154,11 +152,6 @@ async function main(canvas: HTMLCanvasElement) {
             }
         });
     }
-
-    // submitButton?.addEventListener('click', () => {
-    //     console.log("Access through main");
-    //     LookupEntities(searchForm.value, view, sceneData as Awaited<Promise<PromiseLike<SceneData>>>, controller)
-    // });
 
     searchForm?.addEventListener('keypress', (event) => { // Prevents some annoying form behaviour that refreshed the page
         if (event.keyCode === 13) {
